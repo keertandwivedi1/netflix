@@ -1,5 +1,4 @@
 name: Build & Push Netflix Image to ECR
- 
 on:
   push:
     branches:
@@ -7,10 +6,9 @@ on:
   workflow_dispatch:
  
 env:
-  AWS_REGION: ap-south-1                   # <-- CHANGE if your ECR is in a different region
-  AWS_ACCOUNT_ID: "138250642287"           # <-- CHANGE to your actual AWS account ID
-  ECR_REPOSITORY: "netflix"                # <-- CHANGE to your ECR repository name
-  IMAGE_TAG: "latest"
+  AWS_REGION: ap-south-1
+  ECR_REPOSITORY: "public.ecr.aws/o1y6s3b7/netflix"
+  IMAGE_TAG: "${{ github.run_number }}"
  
 jobs:
   build:
@@ -20,41 +18,15 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
  
-      # Ensure AWS CLI can reach ECR and the repo exists; create it if missing
-      - name: Ensure ECR repository exists
-        run: |
-          set -e
-          aws --version
-          echo "Checking ECR repo: ${ECR_REPOSITORY} in ${AWS_REGION}"
-          aws ecr describe-repositories \
-            --repository-names "${ECR_REPOSITORY}" \
-            --region "${AWS_REGION}" >/dev/null 2>&1 || \
-          aws ecr create-repository \
-            --repository-name "${ECR_REPOSITORY}" \
-            --image-scanning-configuration scanOnPush=true \
-            --encryption-configuration encryptionType=AES256 \
-            --region "${AWS_REGION}"
- 
       - name: Login to Amazon ECR
         run: |
           set -e
-          REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-          echo "Logging in to ECR registry: ${REGISTRY}"
-          aws ecr get-login-password --region "${AWS_REGION}" \
-            | docker login --username AWS --password-stdin "${REGISTRY}"
+          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/o1y6s3b7
  
       - name: Build Docker Image
         run: |
           docker build -t "${ECR_REPOSITORY}:${IMAGE_TAG}" .
  
-      - name: Tag Image for ECR
-        run: |
-          REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-          docker tag "${ECR_REPOSITORY}:${IMAGE_TAG}" \
-            "${REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
- 
       - name: Push Image to ECR
         run: |
-          set -e
-          REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-          docker push "${REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          docker push "${ECR_REPOSITORY}:${IMAGE_TAG}"
