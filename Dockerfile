@@ -1,5 +1,5 @@
-FROM nginx:alpine
-RUN rm -rf /usr/share/nginx/html/*
-COPY index.html /usr/share/nginx/html/index.html
-COPY style.css /usr/share/nginx/html/style.css
-EXPOSE 80
+FROM ubuntu:20.04
+RUN apt update && apt install -y nginx 
+COPY index.html /var/www/html/index.nginx-debian.html
+ADD style.css /var/www/html
+CMD ["nginx","-g","daemon off;"]
